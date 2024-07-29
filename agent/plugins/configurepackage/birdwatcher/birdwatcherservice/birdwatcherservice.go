@@ -261,8 +261,14 @@ func downloadFile(ds *PackageService, tracer trace.Tracer, file *archive.File, p
 	}
 
 	log := tracer.CurrentTrace().Logger
-	downloadOutput, downloadErr := birdwatcher.Networkdep.Download(ds.Context, downloadInput)
-	if downloadErr != nil || downloadOutput.LocalFilePath == "" {
+	var downloadOutput *artifact.DownloadOutput
+	var downloadErr error
+	if ds.packageArchive.Name() == archive.PackageArchiveBirdwatcher { // birdwatcher packages use public s3 buckets
+		downloadOutput, downloadErr = birdwatcher.Networkdep.DownloadUsingS3(ds.Context, downloadInput)
+	} else { // modern packages use presigned urls
+		downloadOutput, downloadErr = birdwatcher.Networkdep.DownloadUsingHttp(ds.Context, downloadInput)
+	}
+	if downloadErr != nil || downloadOutput == nil || downloadOutput.LocalFilePath == "" {
 		errMessage := fmt.Sprintf("failed to download installation package reliably, %v", downloadInput.SourceURL)
 		if downloadErr != nil {
 			errMessage = fmt.Sprintf("%v, %v", errMessage, downloadErr.Error())

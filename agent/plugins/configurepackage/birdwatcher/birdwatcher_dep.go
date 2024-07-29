@@ -21,13 +21,18 @@ import (
 
 // dependency on S3 and downloaded artifacts
 type networkDep interface {
-	Download(context context.T, input artifact.DownloadInput) (artifact.DownloadOutput, error)
+	DownloadUsingHttp(context context.T, input artifact.DownloadInput) (*artifact.DownloadOutput, error)
+	DownloadUsingS3(context context.T, input artifact.DownloadInput) (*artifact.DownloadOutput, error)
 }
 
 var Networkdep networkDep = &networkDepImp{}
 
 type networkDepImp struct{}
 
-func (networkDepImp) Download(context context.T, input artifact.DownloadInput) (artifact.DownloadOutput, error) {
-	return artifact.Download(context, input)
+func (networkDepImp) DownloadUsingHttp(context context.T, input artifact.DownloadInput) (*artifact.DownloadOutput, error) {
+	return artifact.DownloadUsingHttp(context, input)
+}
+
+func (networkDepImp) DownloadUsingS3(context context.T, input artifact.DownloadInput) (*artifact.DownloadOutput, error) {
+	return artifact.DownloadUsingS3(context, input)
 }
