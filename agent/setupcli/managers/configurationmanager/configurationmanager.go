@@ -30,13 +30,14 @@ import (
 const agentConfigFile = "amazon-ssm-agent.json"
 
 var (
-	fileExists  = fileutil.Exists
-	osOpen      = os.Open
-	makeDir     = fileutil.MakeDirs
-	osCreate    = os.Create
-	ioCopy      = io.Copy
-	fileWrite   = fileutil.WriteIntoFileWithPermissions
-	readAllText = fileutil.ReadAllText
+	fileExists    = fileutil.Exists
+	osOpen        = os.Open
+	makeDir       = fileutil.MakeDirs
+	osCreate      = os.Create
+	ioCopy        = io.Copy
+	fileWrite     = fileutil.WriteIntoFileWithPermissions
+	readAllText   = fileutil.ReadAllText
+	unmarshalFile = jsonutil.UnmarshalFile
 )
 
 // configurationManager contains functions for handling agent configurations
@@ -49,13 +50,27 @@ func New() *configurationManager {
 }
 
 // IsConfigAvailable verifies whether the config is present or not in a specific folder path
-func (m *configurationManager) IsConfigAvailable(folderPath string) bool {
-	// verify in default agent folder path if folderPath passed is blank
+func (m *configurationManager) IsConfigAvailable(folderPath string) (bool, error) {
+	var configPath string
+
 	if folderPath == "" {
-		return fileExists(filepath.Join(agentConfigFolderPath, agentConfigFile))
+		configPath = filepath.Join(agentConfigFolderPath, agentConfigFile)
+	} else {
+		configPath = filepath.Join(folderPath, agentConfigFile)
 	}
-	// verify agent config presence in folder path
-	return fileExists(filepath.Join(folderPath, agentConfigFile))
+
+	if !fileExists(configPath) {
+		return false, nil
+	}
+
+	// Verify that config is parsable
+	var agentConfig appconfig.SsmagentConfig
+	if err := unmarshalFile(configPath, &agentConfig); err != nil {
+		err = fmt.Errorf("failed to parse config at path %s. Err: %w", folderPath, err)
+		return false, err
+	}
+
+	return true, nil
 }
 
 // ConfigureAgent copies the config in the folder to the applicable location to configure the agent

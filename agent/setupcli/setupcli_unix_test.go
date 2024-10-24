@@ -44,6 +44,7 @@ import (
 )
 
 const breakOutWithPanicMessage = "BREAKOUT_WITH_PANIC"
+const testArtifactsPath = "SomeArtifacts"
 
 func storeMockedFunctions() func() {
 	getPackageManagerStorage := getPackageManager
@@ -74,7 +75,7 @@ func setArgsAndRestore(args ...string) func() {
 }
 
 func initializeArgs() {
-	os.Setenv("SSM_ARTIFACTS_PATH", "SomeArtifacts")
+	os.Setenv("SSM_ARTIFACTS_PATH", testArtifactsPath)
 	os.Setenv("AWS_REGION", "SomeRegion")
 	os.Setenv("SSM_REGISTRATION_ROLE", "SomeRole")
 	os.Setenv("SSM_RESOURCE_TAGS", "SomeTags")
@@ -216,7 +217,7 @@ func TestMain_Install_FailedCheckAgentInstalled(t *testing.T) {
 
 	getConfigurationManager = func() configurationmanager.IConfigurationManager {
 		managerMock := &cmMock.IConfigurationManager{}
-		managerMock.On("IsConfigAvailable", "").Return(true)
+		managerMock.On("IsConfigAvailable", "").Return(true, nil)
 		managerMock.On("CreateUpdateAgentConfigWithOnPremIdentity").Return(nil)
 
 		return managerMock
@@ -237,6 +238,87 @@ func TestMain_Install_FailedCheckAgentInstalled(t *testing.T) {
 	osExit = func(exitCode int, log log.T, message string, args ...interface{}) {
 		assert.Equal(t, 1, exitCode)
 		assert.Contains(t, message, "Failed to determine if agent is installed")
+
+		panic(breakOutWithPanicMessage)
+	}
+
+	defer func() {
+		if errInterface := recover(); errInterface != nil {
+			assert.Equal(t, breakOutWithPanicMessage, errInterface)
+		}
+	}()
+	main()
+	assert.True(t, false, "Should never reach here because of exit")
+}
+
+func TestMain_Install_AgentConfigured_ConfigurationNotLoadable_Fail(t *testing.T) {
+	initializeArgs()
+	defer storeMockedFunctions()()
+
+	defer setArgsAndRestore("/some/path/setupcli", "-install", "-env", "greengrass")()
+
+	getPackageManager = func(log.T) (packagemanagers.IPackageManager, error) {
+		managerMock := &pmMock.IPackageManager{}
+		managerMock.On("IsAgentInstalled").Return(false, fmt.Errorf("SomeError"))
+		return managerMock, nil
+	}
+
+	getServiceManager = func(log.T) (servicemanagers.IServiceManager, error) {
+		managerMock := &smMock.IServiceManager{}
+		return managerMock, nil
+	}
+
+	getConfigurationManager = func() configurationmanager.IConfigurationManager {
+		managerMock := &cmMock.IConfigurationManager{}
+		managerMock.On("IsConfigAvailable", "").Return(false, fmt.Errorf("failed to configure agent"))
+		managerMock.On("CreateUpdateAgentConfigWithOnPremIdentity").Return(nil)
+		return managerMock
+	}
+
+	osExit = func(exitCode int, log log.T, message string, args ...interface{}) {
+		assert.Equal(t, 1, exitCode)
+		assert.Contains(t, message, "failed to configure agent")
+
+		panic(breakOutWithPanicMessage)
+	}
+
+	defer func() {
+		if errInterface := recover(); errInterface != nil {
+			assert.Equal(t, breakOutWithPanicMessage, errInterface)
+		}
+	}()
+	main()
+	assert.True(t, false, "Should never reach here because of exit")
+}
+
+func TestMain_Install_AgentNotConfigured_DefaultConfigurationMissing_Fail(t *testing.T) {
+	initializeArgs()
+	defer storeMockedFunctions()()
+
+	defer setArgsAndRestore("/some/path/setupcli", "-install", "-env", "greengrass")()
+
+	getPackageManager = func(log.T) (packagemanagers.IPackageManager, error) {
+		managerMock := &pmMock.IPackageManager{}
+		managerMock.On("IsAgentInstalled").Return(false, fmt.Errorf("SomeError"))
+		return managerMock, nil
+	}
+
+	getServiceManager = func(log.T) (servicemanagers.IServiceManager, error) {
+		managerMock := &smMock.IServiceManager{}
+		return managerMock, nil
+	}
+
+	getConfigurationManager = func() configurationmanager.IConfigurationManager {
+		managerMock := &cmMock.IConfigurationManager{}
+		managerMock.On("IsConfigAvailable", "").Return(false, nil)
+		managerMock.On("IsConfigAvailable", testArtifactsPath).Return(false, fmt.Errorf("failed to configure agent"))
+		managerMock.On("CreateUpdateAgentConfigWithOnPremIdentity").Return(nil)
+		return managerMock
+	}
+
+	osExit = func(exitCode int, log log.T, message string, args ...interface{}) {
+		assert.Equal(t, 1, exitCode)
+		assert.Contains(t, message, "failed to configure agent")
 
 		panic(breakOutWithPanicMessage)
 	}
@@ -272,7 +354,7 @@ func TestMain_Install_AgentIsInstalled_UninstallAgentFailed(t *testing.T) {
 
 	getConfigurationManager = func() configurationmanager.IConfigurationManager {
 		managerMock := &cmMock.IConfigurationManager{}
-		managerMock.On("IsConfigAvailable", "").Return(true)
+		managerMock.On("IsConfigAvailable", "").Return(true, nil)
 		managerMock.On("CreateUpdateAgentConfigWithOnPremIdentity").Return(nil)
 		return managerMock
 	}
@@ -329,7 +411,7 @@ func TestMain_Install_AgentIsInstalled_UninstallSuccess_InstallFailed(t *testing
 
 	getConfigurationManager = func() configurationmanager.IConfigurationManager {
 		managerMock := &cmMock.IConfigurationManager{}
-		managerMock.On("IsConfigAvailable", "").Return(true)
+		managerMock.On("IsConfigAvailable", "").Return(true, nil)
 		managerMock.On("CreateUpdateAgentConfigWithOnPremIdentity").Return(nil)
 		return managerMock
 	}
@@ -388,7 +470,7 @@ func TestMain_Install_AgentIsInstalled_UninstallSuccess_InstallSuccess_ReloadSer
 
 	getConfigurationManager = func() configurationmanager.IConfigurationManager {
 		managerMock := &cmMock.IConfigurationManager{}
-		managerMock.On("IsConfigAvailable", "").Return(true)
+		managerMock.On("IsConfigAvailable", "").Return(true, nil)
 		managerMock.On("CreateUpdateAgentConfigWithOnPremIdentity").Return(nil)
 		return managerMock
 	}
@@ -447,7 +529,7 @@ func TestMain_Install_AgentNotInstalled_InstallSuccess(t *testing.T) {
 
 	getConfigurationManager = func() configurationmanager.IConfigurationManager {
 		managerMock := &cmMock.IConfigurationManager{}
-		managerMock.On("IsConfigAvailable", "").Return(true)
+		managerMock.On("IsConfigAvailable", "").Return(true, nil)
 		managerMock.On("CreateUpdateAgentConfigWithOnPremIdentity").Return(nil)
 		return managerMock
 	}

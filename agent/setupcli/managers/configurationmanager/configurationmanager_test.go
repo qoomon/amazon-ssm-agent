@@ -44,48 +44,124 @@ func (suite *ConfigManagerTestSuite) SetupTest() {
 }
 
 func (suite *ConfigManagerTestSuite) TestConfigManager_IsConfigAvailable_ValidPaths() {
+	// Arrange
 	configMgr := New()
+	expectedOutput := true
 	fileExists = func(filePath string) bool {
+		// Configuration already exists on device
 		if strings.Contains(filePath, agentConfigFolderPath) {
 			return true
 		}
 		return false
 	}
-	actualOutput := configMgr.IsConfigAvailable("")
-	expectedOutput := true
+
+	unmarshalFile = func(filePath string, dest interface{}) (err error) {
+		if _, ok := dest.(*appconfig.SsmagentConfig); !ok {
+			assert.FailNow(suite.T(), "Unmarshalling to malformed struct")
+		}
+
+		if !strings.Contains(filePath, agentConfigFolderPath) {
+			assert.FailNow(suite.T(), "Incorrect config filepath unmarshalled")
+		}
+
+		return nil
+	}
+
+	// Act
+	actualOutput, err := configMgr.IsConfigAvailable("")
+
+	// Assert
+	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expectedOutput, actualOutput, "config availability check failed")
 
+	// Arrange
+	expectedOutput = true
 	fileExists = func(filePath string) bool {
-		if filePath != agentConfigFolderPath {
+		// No configuration already existing on device
+		if !strings.Contains(filePath, agentConfigFolderPath) {
 			return true
 		}
 		return false
 	}
-	actualOutput = configMgr.IsConfigAvailable("testPath1")
-	expectedOutput = true
+
+	unmarshalFile = func(filePath string, dest interface{}) (err error) {
+		if _, ok := dest.(*appconfig.SsmagentConfig); !ok {
+			assert.FailNow(suite.T(), "Unmarshalling to malformed struct")
+		}
+
+		if strings.Contains(filePath, agentConfigFolderPath) {
+			assert.FailNow(suite.T(), "Incorrect config filepath unmarshalled")
+		}
+
+		return nil
+	}
+
+	// Act
+	actualOutput, err = configMgr.IsConfigAvailable("testPath1")
+
+	// Assert
+	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expectedOutput, actualOutput, "config availability check failed")
 }
 
 func (suite *ConfigManagerTestSuite) TestConfigManager_IsConfigAvailable_InvalidPaths() {
+	// Arrange
 	configMgr := New()
+	expectedOutput := false
 	fileExists = func(filePath string) bool {
 		if strings.Contains(filePath, agentConfigFolderPath) {
+			// Custom configuration doesnt exist on device
 			return false
 		}
 		return true
 	}
-	actualOutput := configMgr.IsConfigAvailable("")
-	expectedOutput := false
+
+	unmarshalFile = func(filePath string, dest interface{}) (err error) {
+		if _, ok := dest.(*appconfig.SsmagentConfig); !ok {
+			assert.FailNow(suite.T(), "Unmarshalling to malformed struct")
+		}
+
+		if strings.Contains(filePath, agentConfigFolderPath) {
+			assert.FailNow(suite.T(), "Incorrect config filepath unmarshalled")
+		}
+
+		return fmt.Errorf("invalid file content")
+	}
+
+	// Act
+	actualOutput, err := configMgr.IsConfigAvailable("")
+
+	// Assert
+	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expectedOutput, actualOutput, "config availability check failed")
 
+	// Arrange
+	expectedOutput = false
 	fileExists = func(filePath string) bool {
-		if filePath != agentConfigFolderPath {
+		if strings.Contains(filePath, agentConfigFolderPath) {
+			// Custom configuration doesnt exist on device
 			return false
 		}
 		return true
 	}
-	actualOutput = configMgr.IsConfigAvailable("testPath1")
-	expectedOutput = false
+
+	unmarshalFile = func(filePath string, dest interface{}) (err error) {
+		if _, ok := dest.(*appconfig.SsmagentConfig); !ok {
+			assert.FailNow(suite.T(), "Unmarshalling to malformed struct")
+		}
+
+		if strings.Contains(filePath, agentConfigFolderPath) {
+			assert.FailNow(suite.T(), "Incorrect config filepath unmarshalled")
+		}
+
+		return fmt.Errorf("invalid file content")
+	}
+
+	// Act
+	actualOutput, err = configMgr.IsConfigAvailable("testPath1")
+
+	// Assert
+	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), expectedOutput, actualOutput, "config availability check failed")
 }
 

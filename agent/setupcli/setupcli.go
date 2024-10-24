@@ -198,9 +198,10 @@ func performGreengrassSteps(log log.T, packageManager packagemanagers.IPackageMa
 	if install {
 		// Configure ssm agent using configuration in artifacts folder if not already configured
 		configManager := getConfigurationManager()
-		log.Infof("Attempting to configure agent")
+		log.Infof("Resolving agent config file")
 		if err = configurationmanager.ConfigureAgent(log, configManager, artifactsDir); err != nil {
-			log.Warnf("Failed to configure agent with error: %w", err)
+			errMessage := fmt.Sprintf("failed to configure agent. Err: %v", err)
+			osExit(1, log, errMessage)
 		}
 
 		if err = configManager.CreateUpdateAgentConfigWithOnPremIdentity(); err != nil {

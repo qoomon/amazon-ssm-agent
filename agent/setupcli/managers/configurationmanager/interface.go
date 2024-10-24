@@ -16,7 +16,7 @@ package configurationmanager
 // IConfigurationManager contains functions for handling agent configurations
 type IConfigurationManager interface {
 	// IsConfigAvailable returns true if config file is available else false
-	IsConfigAvailable(folderPath string) bool
+	IsConfigAvailable(folderPath string) (bool, error)
 	// ConfigureAgent copies the config in the folder to the applicable location to configure the agent
 	ConfigureAgent(folderPath string) error
 	// CreateUpdateAgentConfigWithOnPremIdentity copies the config in the folder to the applicable location to configure the agent
