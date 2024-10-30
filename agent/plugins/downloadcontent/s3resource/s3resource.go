@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/aws/amazon-ssm-agent/agent/appconfig"
@@ -43,7 +44,8 @@ type S3Resource struct {
 
 // S3Info represents the sourceInfo type sent by runcommand
 type S3Info struct {
-	Path string `json:"path"`
+	Path                string `json:"path"`
+	ExpectedBucketOwner string `json:"expectedBucketOwner"`
 }
 
 // NewS3Resource is a constructor of type GitResource
@@ -51,19 +53,20 @@ func NewS3Resource(context context.T, info string) (s3 *S3Resource, err error) {
 	var s3Info S3Info
 	var input artifact.DownloadInput
 
-	if s3Info, err = parseSourceInfo(info); err != nil {
-		return nil, fmt.Errorf("s3 url parsing failed. %v", err)
+	if s3Info, err = parseAndValidateSourceInfo(info); err != nil {
+		return nil, fmt.Errorf("s3 source info parsing failed. %v", err)
 	}
 
 	input.SourceURL = s3Info.Path
+	input.ExpectedBucketOwner = s3Info.ExpectedBucketOwner
 	return &S3Resource{
 		context: context,
 		Info:    s3Info,
 	}, nil
 }
 
-// parseSourceInfo unmarshals the information in sourceInfo of type GitInfo and returns it
-func parseSourceInfo(sourceInfo string) (s3Info S3Info, err error) {
+// parseAndValidateSourceInfo unmarshals the information in sourceInfo of type GitInfo and returns it
+func parseAndValidateSourceInfo(sourceInfo string) (s3Info S3Info, err error) {
 
 	if err = jsonutil.Unmarshal(sourceInfo, &s3Info); err != nil {
 		return s3Info, fmt.Errorf("Source Info could not be unmarshalled for source type S3. Please check JSON format of SourceInfo - %v", err)
@@ -71,8 +74,21 @@ func parseSourceInfo(sourceInfo string) (s3Info S3Info, err error) {
 
 	// Trimming the path in URL to remove any unnecessary spaces
 	s3Info.Path = strings.TrimSpace(s3Info.Path)
+	s3Info.ExpectedBucketOwner = strings.TrimSpace(s3Info.ExpectedBucketOwner)
 
+	if err = validateSourceInfo(s3Info); err != nil {
+		return s3Info, err
+	}
 	return
+}
+
+// validateSourceInfo validates that the expectedBucketOwner matches 12-digit AWS Account ID Format
+func validateSourceInfo(s3Info S3Info) (err error) {
+	var accountIdValidation = regexp.MustCompile(`^[0-9]{12}$`)
+	if s3Info.ExpectedBucketOwner != "" && !accountIdValidation.MatchString(s3Info.ExpectedBucketOwner) {
+		return errors.New("Expected Bucket Owner is invalid. 12-Digit AWS Account ID expected.")
+	}
+	return nil
 }
 
 // DownloadRemoteResource calls download to pull down files or directory from s3
@@ -175,6 +191,7 @@ func (s3 *S3Resource) DownloadRemoteResource(filesys filemanager.FileSystem, des
 				}
 			}
 			input.DestinationDirectory = localFilePath
+			input.ExpectedBucketOwner = s3.Info.ExpectedBucketOwner
 			downloadOutput, err := dep.Download(s3.context, input)
 			if err != nil {
 				return err, nil

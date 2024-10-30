@@ -131,6 +131,45 @@ func TestS3Resource_GetS3BucketURLString_bucketNameInS3URL(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestS3Resource_ValidateAndParseSourceInfo_WithAlphabeticExpectedBucketOwner_ThrowsError(t *testing.T) {
+
+	// alphabetic expectedBucketOwner
+	sourceInfo := `{
+		"Path": "newpath",
+		"ExpectedBucketOwner": "invalidBucketOwner"
+	}`
+
+	s3resource, err := NewS3Resource(contextMock, sourceInfo)
+
+	assert.Errorf(t, err)
+}
+
+func TestS3Resource_ValidateAndParseSourceInfo_WithShortExpectedBucketOwner_ThrowsError(t *testing.T) {
+
+	// short expectedBucketOwner
+	sourceInfo := `{
+		"Path": "newpath",
+		"ExpectedBucketOwner": "1234"
+	}`
+
+	s3resource, err := NewS3Resource(contextMock, sourceInfo)
+
+	assert.Errorf(t, err)
+}
+
+func TestS3Resource_ValidateAndParseSourceInfo_WithLongExpectedBucketOwner_ThrowsError(t *testing.T) {
+
+	// long expectedBucketOwner
+	sourceInfo := `{
+		"Path": "newpath",
+		"ExpectedBucketOwner": "1234567890123456"
+	}`
+
+	s3resource, err := NewS3Resource(contextMock, sourceInfo)
+
+	assert.Errorf(t, err)
+}
+
 func TestS3Resource_Download(t *testing.T) {
 
 	depMock := new(s3resource.S3DepMock)

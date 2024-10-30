@@ -391,11 +391,11 @@ func TestParseAndValidateInput_NoInput(t *testing.T) {
 }
 
 func TestParseAndValidateInput_SourceInfoStringInput(t *testing.T) {
-	sourceInfoOutput := "{'Path': 'test://test.com'}"
+	sourceInfoOutput := "{\"Path\":\"test://test.com\"}"
 	sourceTypeTest := "S3"
 	destinationPathTest := "destinationPathTest"
 	var rawPluginInput interface{}
-	rawPluginInputBytes := "{\"SourceType\":\"" + sourceTypeTest + "\", \"DestinationPath\" : \"" + destinationPathTest + "\", \"SourceInfo\": \"" + sourceInfoOutput + "\"}"
+	rawPluginInputBytes := "{\"SourceType\":\"" + sourceTypeTest + "\", \"DestinationPath\" : \"" + destinationPathTest + "\", \"SourceInfo\": " + sourceInfoOutput + "}"
 	_ = json.Unmarshal([]byte(rawPluginInputBytes), &rawPluginInput)
 	downloadContent, err := parseAndValidateInput(rawPluginInput)
 	assert.NoError(t, err)

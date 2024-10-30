@@ -40,7 +40,7 @@ var (
 	mockLog              = mockContext.Log()
 
 	downloadTests = []DownloadTest{
-		// {DownloadInput{SourceUrl, DestinationDirectory, SourceHashValue, SourceHashType},
+		// {DownloadInput{SourceUrl, DestinationDirectory, SourceChecksums, ExpectedBucketOwner},
 		// DownloadOutput{LocalFilePath, IsUpdated, IsHashMatched}},
 		{
 			// validate sha256
@@ -49,7 +49,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"sha256": "090c1965e46155b2b23ba9093ed7c67243957a397e3ad5531a693d57958a760a",
-				}},
+				},
+				""},
 			DownloadOutput{
 				localPathExist,
 				false,
@@ -62,7 +63,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"sha256": "111111111",
-				}},
+				},
+				""},
 			DownloadOutput{
 				localPathExist,
 				false,
@@ -75,7 +77,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"md5": "e84913ff3a8eef39238b32170e657ba8",
-				}},
+				},
+				""},
 			DownloadOutput{
 				localPathExist,
 				false,
@@ -89,7 +92,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"md5": "222222222",
-				}},
+				},
+				""},
 			DownloadOutput{
 				localPathExist,
 				false,
@@ -102,7 +106,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"": "090c1965e46155b2b23ba9093ed7c67243957a397e3ad5531a693d57958a760a",
-				}},
+				},
+				""},
 			DownloadOutput{
 				localPathExist,
 				false,
@@ -115,7 +120,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"": "090c1965e46155b2b23ba9093ed7c67243957a397e3ad5531a693d57958a760a",
-				}},
+				},
+				""},
 			DownloadOutput{
 				"",
 				false,
@@ -128,7 +134,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"": "090c1965e46155b2b23ba9093ed7c67243957a397e3ad5531a693d57958a760a",
-				}},
+				},
+				""},
 			DownloadOutput{
 				"",
 				false,
@@ -141,7 +148,8 @@ var (
 				downloadFolder,
 				map[string]string{
 					"": "",
-				}},
+				},
+				""},
 			DownloadOutput{
 				"",
 				false,
@@ -153,6 +161,7 @@ var (
 				localPathExist,
 				downloadFolder,
 				map[string]string{},
+				"",
 			},
 			DownloadOutput{
 				localPathExist,
@@ -165,6 +174,7 @@ var (
 				localPathExist,
 				downloadFolder,
 				map[string]string{"sha256": ""},
+				"",
 			},
 			DownloadOutput{
 				localPathExist,
@@ -180,6 +190,7 @@ var (
 					"md5":    "111111111",
 					"sha256": "090c1965e46155b2b23ba9093ed7c67243957a397e3ad5531a693d57958a760a",
 				},
+				"",
 			},
 			DownloadOutput{
 				localPathExist,
@@ -195,6 +206,7 @@ var (
 					"sha512": "111111111",
 					"sha1":   "090c1965e46155b2b23ba9093ed7c67243957a397e3ad5531a693d57958a760a",
 				},
+				"",
 			},
 			DownloadOutput{
 				localPathExist,
@@ -210,6 +222,7 @@ var (
 					"foo":    "123456789",
 					"sha256": "090c1965e46155b2b23ba9093ed7c67243957a397e3ad5531a693d57958a760a",
 				},
+				"",
 			},
 			DownloadOutput{
 				localPathExist,

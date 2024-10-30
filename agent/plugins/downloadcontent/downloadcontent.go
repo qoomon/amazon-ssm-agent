@@ -171,6 +171,7 @@ func (p *Plugin) runCopyContent(log log.T, input *DownloadContentPlugin, config 
 
 	var result *remoteresource.DownloadResult
 	log.Debug("Downloading resource")
+
 	if err, result = remoteResource.DownloadRemoteResource(p.filesys, destinationPath); err != nil {
 		output.MarkAsFailed(err)
 		return
@@ -209,7 +210,6 @@ func Name() string {
 func parseAndValidateInput(rawPluginInput interface{}) (*DownloadContentPlugin, error) {
 	var input DownloadContentPlugin
 	var err error
-
 	// the below code is added to fix the issue when sourceInfo json is parsed as map instead of string
 	pluginInputMap := make(map[string]interface{})
 	if err = jsonutil.Remarshal(rawPluginInput, &pluginInputMap); err != nil {
@@ -252,6 +252,7 @@ func validateInput(input *DownloadContentPlugin) (valid bool, err error) {
 	if input.SourceInfo == "" {
 		return false, errors.New("SourceInfo must be specified")
 	}
+
 	return true, nil
 }
 
