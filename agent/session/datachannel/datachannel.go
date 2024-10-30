@@ -24,6 +24,7 @@ import (
 	"math"
 	"math/rand"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -270,30 +271,22 @@ func (dataChannel *DataChannel) Initialize(context context.T,
 	}
 }
 
-// SetWebSocket populates webchannel object.
-func (dataChannel *DataChannel) SetWebSocket(context context.T,
-	mgsService service.Service,
+func (dataChannel *DataChannel) getWsChannelOnErrorHandler(mgsService service.Service,
 	sessionId string,
 	clientId string,
-	onMessageHandler func(input []byte)) error {
+	log log.T) func(error) {
 
-	log := context.Log()
-	uuid.SwitchFormat(uuid.CleanHyphen)
-	requestId := uuid.NewV4().String()
-
-	log.Infof("Setting up datachannel for session: %s, requestId: %s, clientId: %s", sessionId, requestId, clientId)
-	tokenValue, err := getDataChannelToken(log, mgsService, sessionId, requestId, clientId)
-	if err != nil {
-		log.Errorf("Failed to get datachannel token, error: %s", err)
-		return err
-	}
-
-	onErrorHandler := func(err error) {
+	return func(err error) {
 		uuid.SwitchFormat(uuid.CleanHyphen)
 		requestId := uuid.NewV4().String()
 		callable := func() (channel interface{}, err error) {
 			tokenValue, err := getDataChannelToken(log, mgsService, sessionId, requestId, clientId)
 			if err != nil {
+				log.Debugf("getDataChannelToken received error: %v", err)
+				if strings.Contains(err.Error(), mgsConfig.SessionAlreadyTerminatedError) {
+					log.Info("Setting task to cancelled as session is already terminated")
+					dataChannel.cancelFlag.Set(task.Canceled)
+				}
 				return dataChannel, err
 			}
 			dataChannel.wsChannel.SetChannelToken(tokenValue)
@@ -314,6 +307,27 @@ func (dataChannel *DataChannel) SetWebSocket(context context.T,
 			log.Error(err)
 		}
 	}
+}
+
+// SetWebSocket populates webchannel object.
+func (dataChannel *DataChannel) SetWebSocket(context context.T,
+	mgsService service.Service,
+	sessionId string,
+	clientId string,
+	onMessageHandler func(input []byte)) error {
+
+	log := context.Log()
+	uuid.SwitchFormat(uuid.CleanHyphen)
+	requestId := uuid.NewV4().String()
+
+	log.Infof("Setting up datachannel for session: %s, requestId: %s, clientId: %s", sessionId, requestId, clientId)
+	tokenValue, err := getDataChannelToken(log, mgsService, sessionId, requestId, clientId)
+	if err != nil {
+		log.Errorf("Failed to get datachannel token, error: %s", err)
+		return err
+	}
+
+	onErrorHandler := dataChannel.getWsChannelOnErrorHandler(mgsService, sessionId, clientId, log)
 
 	if err := dataChannel.wsChannel.Initialize(context,
 		sessionId,
@@ -327,6 +341,7 @@ func (dataChannel *DataChannel) SetWebSocket(context context.T,
 		log.Errorf("failed to initialize websocket channel for datachannel, error: %s", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -1169,7 +1184,7 @@ func getDataChannelToken(log log.T,
 		return "", fmt.Errorf("CreateDataChannel failed with no output or error: %s", err)
 	}
 
-	log.Debugf("Successfully get datachannel token")
+	log.Debug("Successfully get datachannel token")
 	return *createDataChannelOutput.TokenValue, nil
 }
 

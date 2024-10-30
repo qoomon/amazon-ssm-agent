@@ -130,6 +130,34 @@ func TestSetWebSocket(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+func TestCancelTaskOnSessionTermination(t *testing.T) {
+	dataChannel := getDataChannel()
+
+	// Using dedicated testMockService as strechr does not have reset mock: https://github.com/stretchr/testify/issues/944
+	testMockService := &serviceMock.Service{}
+	dataChannel.Service = testMockService
+	testMockService.On("CreateDataChannel", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New(mgsConfig.SessionAlreadyTerminatedError))
+	mockCancelFlag.On("Set", task.Canceled).Return()
+
+	onErrorHandler := dataChannel.getWsChannelOnErrorHandler(testMockService, sessionId, clientId, mockLog)
+	onErrorHandler(errors.New("Unexpected EOF"))
+
+	testMockService.AssertExpectations(t)
+	mockCancelFlag.AssertExpectations(t)
+}
+
+func TestNotCancelTaskOnOtherErrors(t *testing.T) {
+	dataChannel := getDataChannel()
+	testMockService := &serviceMock.Service{}
+	dataChannel.Service = testMockService
+	testMockService.On("CreateDataChannel", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("Random Error From Session"))
+	// By not having a mockCancelFlag defined, if it is invoked, this test will panic and fail.
+
+	onErrorHandler := dataChannel.getWsChannelOnErrorHandler(testMockService, sessionId, clientId, mockLog)
+	onErrorHandler(errors.New("Unexpected EOF"))
+	testMockService.AssertExpectations(t)
+}
+
 func TestOpen(t *testing.T) {
 	dataChannel := getDataChannel()
 
