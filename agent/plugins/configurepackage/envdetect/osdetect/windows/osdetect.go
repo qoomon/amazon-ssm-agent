@@ -2,10 +2,11 @@ package windows
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 
-	"github.com/aws/amazon-ssm-agent/agent/appconfig"
 	"github.com/aws/amazon-ssm-agent/agent/log"
 
 	c "github.com/aws/amazon-ssm-agent/agent/plugins/configurepackage/envdetect/constants"
@@ -61,8 +62,9 @@ func isWindowsNano(operatingSystemSKU string) bool {
 }
 
 func getWmiOSInfo() (string, error) {
-	cmdArgs := []string{"Get-CimInstance -ClassName Win32_OperatingSystem | Format-List -Property OperatingSystemSKU, Version"}
-	cmdOut, err := exec.Command(appconfig.PowerShellPluginCommandName, cmdArgs...).Output()
+	wmicCommand := filepath.Join(os.Getenv("WINDIR"), "System32", "wbem", "wmic.exe")
+	cmdArgs := []string{"OS", "get", "/format:list"}
+	cmdOut, err := exec.Command(wmicCommand, cmdArgs...).Output()
 	if err != nil {
 		return "", err
 	}
@@ -79,7 +81,7 @@ func parseOperatingSystemSKU(wmioutput string) (string, error) {
 }
 
 func parseProperty(wmioutput string, property string) (string, error) {
-	regex := fmt.Sprintf(`(?m)^\s*%s\s*:\s*(\S+)\s*$`, property)
+	regex := fmt.Sprintf(`(?m)^\s*%s\s*=\s*(\S+)\s*$`, property)
 	re := regexp.MustCompile(regex)
 	match := re.FindStringSubmatch(wmioutput)
 
