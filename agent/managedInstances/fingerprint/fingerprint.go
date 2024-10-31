@@ -87,16 +87,10 @@ func SetSimilarityThreshold(log log.T, value int) (err error) {
 }
 
 // generateFingerprint generates new fingerprint and saves it in the vault
-func generateFingerprint(log log.T) (fingerprint string, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Errorf("Recovered from panic: %v", r)
-			err = fmt.Errorf("Unexpected error while calculateing fingerprint: %v", r)
-		}
-	}()
-
+func generateFingerprint(log log.T) (string, error) {
 	var hardwareHash map[string]string
 	var savedHwInfo hwInfo
+	var err error
 	var hwHashErr error
 
 	// retry getting the new hash and compare with the saved hash for 3 times

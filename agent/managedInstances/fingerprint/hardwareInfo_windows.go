@@ -106,15 +106,16 @@ var currentHwHash = func() (map[string]string, error) {
 	log.Debug("WMI Service is ready to be queried....")
 
 	wmiInterface, _ := getWMIInterface(log)
+
 	hardwareHash[hardwareID], _ = csproductUuid(log, wmiInterface)
-	hardwareHash["processor-hash"], _ = processorInfoHash(log, wmiInterface)
-	hardwareHash["memory-hash"], _ = memoryInfoHash(log, wmiInterface)
-	hardwareHash["bios-hash"], _ = biosInfoHash(log, wmiInterface)
-	hardwareHash["system-hash"], _ = systemInfoHash(log, wmiInterface)
+	hardwareHash["processor-hash"], _ = processorInfoHash(wmiInterface)
+	hardwareHash["memory-hash"], _ = memoryInfoHash(wmiInterface)
+	hardwareHash["bios-hash"], _ = biosInfoHash(wmiInterface)
+	hardwareHash["system-hash"], _ = systemInfoHash(wmiInterface)
 	hardwareHash["hostname-info"], _ = hostnameInfo()
 	hardwareHash[ipAddressID], _ = primaryIpInfo()
 	hardwareHash["macaddr-info"], _ = macAddrInfo()
-	hardwareHash["disk-info"], _ = diskInfoHash(log, wmiInterface)
+	hardwareHash["disk-info"], _ = diskInfoHash(wmiInterface)
 
 	return hardwareHash, nil
 }
@@ -156,10 +157,8 @@ func getWMIInterface(logger log.T) (wmiInterface WMIInterface, err error) {
 
 		// if it is Windows 2025 or later use CIM Instance, otherwise use WMIC
 		if winMajorVersion >= win2025MajorVersion && winMinorVersion >= win2025MinorVersion && winBuildNumber >= win2025BuildNumber {
-			logger.Debugf("Windows version is %d.%d.%d, setting CIM Instance as WMI interface", winMajorVersion, winMinorVersion, winBuildNumber)
 			return cimInstance, nil
 		} else {
-			logger.Debugf("Windows version is %d.%d.%d, setting wmic as WMI interface", winMajorVersion, winMinorVersion, winBuildNumber)
 			return wmic, nil
 		}
 	}
@@ -174,7 +173,7 @@ func csproductUuid(logger log.T, wmiInterface WMIInterface) (encodedValue string
 	case wmic:
 		encodedValue, uuid, err = commandOutputHash(wmicCommand, "csproduct", "get", "UUID")
 	case cimInstance:
-		encodedValue, uuid, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs(logger, "Win32_ComputerSystemProduct", "UUID"))
+		encodedValue, uuid, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs("Win32_ComputerSystemProduct", "UUID"))
 	default:
 		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
 	}
@@ -183,13 +182,13 @@ func csproductUuid(logger log.T, wmiInterface WMIInterface) (encodedValue string
 	return
 }
 
-func processorInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err error) {
+func processorInfoHash(wmiInterface WMIInterface) (value string, err error) {
 	switch wmiInterface {
 	case wmic:
 		value, _, err = commandOutputHash(wmicCommand, "cpu", "list", "brief")
 	case cimInstance:
 		propertiesToRetrieve := []string{"Caption", "DeviceID", "Manufacturer", "MaxClockSpeed", "Name", "SocketDesignation"}
-		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs(logger, "WIN32_PROCESSOR", propertiesToRetrieve...))
+		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs("WIN32_PROCESSOR", propertiesToRetrieve...))
 	default:
 		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
 	}
@@ -197,13 +196,13 @@ func processorInfoHash(logger log.T, wmiInterface WMIInterface) (value string, e
 	return
 }
 
-func memoryInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err error) {
+func memoryInfoHash(wmiInterface WMIInterface) (value string, err error) {
 	switch wmiInterface {
 	case wmic:
 		value, _, err = commandOutputHash(wmicCommand, "memorychip", "list", "brief")
 	case cimInstance:
 		propertiesToRetrieve := []string{"Capacity", "DeviceLocator", "MemoryType", "Name", "Tag", "TotalWidth"}
-		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs(logger, "Win32_PhysicalMemory", propertiesToRetrieve...))
+		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs("Win32_PhysicalMemory", propertiesToRetrieve...))
 	default:
 		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
 	}
@@ -211,13 +210,13 @@ func memoryInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err 
 	return
 }
 
-func biosInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err error) {
+func biosInfoHash(wmiInterface WMIInterface) (value string, err error) {
 	switch wmiInterface {
 	case wmic:
 		value, _, err = commandOutputHash(wmicCommand, "bios", "list", "brief")
 	case cimInstance:
 		propertiesToRetrieve := []string{"Manufacturer", "Name", "SerialNumber", "SMBIOSBIOSVersion", "Version"}
-		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs(logger, "Win32_BIOS", propertiesToRetrieve...))
+		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs("Win32_BIOS", propertiesToRetrieve...))
 	default:
 		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
 	}
@@ -225,13 +224,13 @@ func biosInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err er
 	return
 }
 
-func systemInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err error) {
+func systemInfoHash(wmiInterface WMIInterface) (value string, err error) {
 	switch wmiInterface {
 	case wmic:
 		value, _, err = commandOutputHash(wmicCommand, "computersystem", "list", "brief")
 	case cimInstance:
 		propertiesToRetrieve := []string{"Domain", "Manufacturer", "Model", "Name", "PrimaryOwnerName", "TotalPhysicalMemory"}
-		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs(logger, "Win32_ComputerSystem", propertiesToRetrieve...))
+		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs("Win32_ComputerSystem", propertiesToRetrieve...))
 	default:
 		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
 	}
@@ -239,13 +238,13 @@ func systemInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err 
 	return
 }
 
-func diskInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err error) {
+func diskInfoHash(wmiInterface WMIInterface) (value string, err error) {
 	switch wmiInterface {
 	case wmic:
 		value, _, err = commandOutputHash(wmicCommand, "diskdrive", "list", "brief")
 	case cimInstance:
 		propertiesToRetrieve := []string{"Caption", "DeviceID", "Model", "Partitions", "Size"}
-		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs(logger, "Win32_DiskDrive", propertiesToRetrieve...))
+		value, _, err = commandOutputHash(appconfig.PowerShellPluginCommandName, getCimInstanceCmdArgs("Win32_DiskDrive", propertiesToRetrieve...))
 	default:
 		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
 	}
@@ -253,7 +252,7 @@ func diskInfoHash(logger log.T, wmiInterface WMIInterface) (value string, err er
 	return
 }
 
-func getCimInstanceCmdArgs(logger log.T, className string, properties ...string) string {
+func getCimInstanceCmdArgs(className string, properties ...string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Get-CimInstance -ClassName %s", className))
 	if len(properties) > 0 {
@@ -263,7 +262,5 @@ func getCimInstanceCmdArgs(logger log.T, className string, properties ...string)
 		}
 	}
 
-	cmd := fmt.Sprintf("%s | ConvertTo-Json", strings.TrimRight(sb.String(), ", "))
-	logger.Debugf("getCimInstanceCmdArgs cmd=%s", cmd)
-	return cmd
+	return fmt.Sprintf("%s | ConvertTo-Json", strings.TrimRight(sb.String(), ", "))
 }
