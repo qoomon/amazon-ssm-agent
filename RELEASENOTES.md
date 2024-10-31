@@ -1,5 +1,10 @@
 Latest
 ===============
+- Revert compatibility hook for future Windows versions as it increased CPU consumption for document execution on Windows.
+- Revert Increase RunCommand timeout during the registration process for the on-prem instances
+
+3.3.1142.0
+===============
 - Fail windows update when installed version does not match
 - Reduced length of IMDS errors to shorter format
 - Increase the RunCommand timeout during the registration process for the on-prem instances
