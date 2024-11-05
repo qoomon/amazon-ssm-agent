@@ -175,7 +175,7 @@ func main() {
 		// Perform on-prem steps based on flags passed
 		err = performOnpremSteps(log, packageManager, verificationManager, serviceManager)
 		if err != nil {
-			osExit(1, log, "Failed to perform Onprem registration: %v", err)
+			osExit(1, log, "Failed to perform agent-installation/on-prem registration: %v", err)
 		}
 
 	} else {
@@ -335,7 +335,6 @@ func performOnpremSteps(log log.T, packageManager packagemanagers.IPackageManage
 	if err != nil {
 		return fmt.Errorf("could not create ssm setup cli artifacts temp directory in child folder: %v", err)
 	}
-
 	isNano, err := isPlatformNano(log)
 	if isNano {
 		log.Infof("Windows Nano platform detected")
@@ -364,10 +363,14 @@ func performOnpremSteps(log log.T, packageManager packagemanagers.IPackageManage
 	if err != nil {
 		return fmt.Errorf("error while verifying installed ssm-setup-cli checksum: %v", err)
 	}
-
 	err = installAndVerifyAgent(log, packageManager, verificationManager, serviceManager, downloadManager, setupCLIArtifactsPath, isNano)
 	if err != nil {
 		return err
+	}
+
+	if isAgentInstallationOnly() {
+		log.Infof("Agent installation completed")
+		return nil
 	}
 
 	if register {
@@ -376,6 +379,7 @@ func performOnpremSteps(log log.T, packageManager packagemanagers.IPackageManage
 			return err
 		}
 	}
+
 	// sleeping for 5 seconds for the process to launch
 	timeSleep(5 * time.Second)
 	present, err := checkForSingleAgentProcesses(log)
@@ -396,18 +400,22 @@ func installAndVerifyAgent(log log.T,
 	downloadManager downloadmanager.IDownloadManager,
 	setupCLIArtifactsPath string,
 	isNano bool) error {
+
 	var targetAgentVersion string
+
 	// Check whether SSM-Setup-CLI is latest or not.
 	latestVersion, err := downloadManager.GetLatestVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get latest version: %v", err)
 	}
+	// assign latest version when latest version value is passed in -version flag
 	if strings.EqualFold(version, utility.LatestVersionString) {
 		targetAgentVersion = latestVersion
 	}
 
-	// Check whether the requested target version is installed
 	var isAgentInstalled bool // This bool says that an agent is already installed
+
+	// Check whether the requested target version is installed
 	if isAgentInstalled, err = packageManager.IsAgentInstalled(); err != nil {
 		return fmt.Errorf("failed to get agent installation status: %v", err)
 	}
@@ -429,10 +437,12 @@ func installAndVerifyAgent(log log.T,
 	if isAgentInstalled && agentVersionInstalled == "" {
 		return fmt.Errorf("error while getting installed agent version: %v", err)
 	}
+	log.Infof("Installed agent version - %v", agentVersionInstalled)
+
 	if isAgentInstalled && targetAgentVersion == "" {
 		targetAgentVersion = agentVersionInstalled
 	}
-	log.Infof("Installed agent version - %v", agentVersionInstalled)
+
 	var isTargetAgentInstalled bool // This bool says that the target version is already installed
 	sourceVersionFilePaths, targetVersionFilePaths := "", ""
 	uninstallNeeded := false
@@ -504,6 +514,7 @@ func installAndVerifyAgent(log log.T,
 	if err = configManager.CreateUpdateAgentConfigWithOnPremIdentity(); err != nil {
 		return fmt.Errorf("return failed to update agent config %v", err)
 	}
+	log.Infof("Agent is configured successfully")
 
 	if !isTargetAgentInstalled {
 		log.Infof("Starting agent installation")
@@ -729,10 +740,22 @@ func verifyParams(log log.T, additionalVerifier func() string) {
 	}
 }
 
+func isAgentInstallationOnly() bool {
+	if !register && install {
+		return true
+	}
+	return false
+}
+
 func onPremParamVerification() string {
 	var errMessage string
-	if !register {
-		errMessage += "Action required (register). "
+	// Customer should pass either -register or -install flag to use SSM-Setup-CLI for Onprem
+	if !register && !install {
+		errMessage += "Action required (-register or -install flag required). "
+	}
+	// return when only installation is needed
+	if isAgentInstallationOnly() {
+		return errMessage
 	}
 	if activationId != "" || activationCode != "" {
 		if activationCode == "" {
@@ -769,13 +792,20 @@ func flagUsage() {
 
 	fmt.Fprintln(os.Stderr, "\nCommand-line Usage for ONPREM environment:")
 	fmt.Fprintln(os.Stderr, "\t-region        \tRegion used for ssm agent download location and registration \t(REQUIRED)")
-	fmt.Fprintln(os.Stderr, "\t-version\tVersion of the ssm agent to download ('stable' or 'latest'). Default set to 'stable' if agent is not already installed \t(OPTIONAL)")
+	fmt.Fprintln(os.Stderr, "\t-version\tVersion of the ssm agent to download and install ('stable' or 'latest'). Default set to 'stable' if agent is not already installed; otherwise, skip the installation \t(OPTIONAL)")
 	fmt.Fprintln(os.Stderr, "\t-downgrade\tSet when the agent needs to be downgraded \t(OPTIONAL but REQUIRED during downgrade)")
 	fmt.Fprintln(os.Stderr, "\t-skip-signature-validation\tSkip signature validation \t(OPTIONAL)")
 	fmt.Fprintln(os.Stderr, "\t-register      \tRegister ssm agent if unregistered or override is set \t(REQUIRED)")
 	fmt.Fprintln(os.Stderr, "\t\t-activation-code  \tSSM Activation Code for Onprem environment \t(REQUIRED and paired with activation-id)")
 	fmt.Fprintln(os.Stderr, "\t\t-activation-id  \tSSM Activation ID for Onprem environment \t(REQUIRED and paired with Activation code)")
 	fmt.Fprintln(os.Stderr, "\t\t-override \t\tOverride existing registration if present \t(OPTIONAL)")
+
+	fmt.Fprintln(os.Stderr, "\nCommand-line Usage for SSM agent installation alone(without registration) in ONPREM environment:")
+	fmt.Fprintln(os.Stderr, "\t-install        \tInstall the SSM Agent. Use this flag only if you want to skip registration. \t(REQUIRED)")
+	fmt.Fprintln(os.Stderr, "\t\t-region        \tRegion used for ssm agent download location and registration \t(REQUIRED)")
+	fmt.Fprintln(os.Stderr, "\t\t-version\tVersion of the ssm agent to download and install ('stable' or 'latest'). Default set to 'stable' if agent is not already installed; otherwise, skip the installation. \t(OPTIONAL)")
+	fmt.Fprintln(os.Stderr, "\t\t-downgrade\tSet when the agent needs to be downgraded \t(OPTIONAL but REQUIRED during downgrade)")
+	fmt.Fprintln(os.Stderr, "\t\t-skip-signature-validation\tSkip signature validation \t(OPTIONAL)")
 
 	fmt.Fprintln(os.Stderr, "\nCommand-line Usage for GREENGRASS environment:")
 	fmt.Fprintln(os.Stderr, "\t-artifacts-dir \tDirectory for ssm agent install package and install/register scripts")
