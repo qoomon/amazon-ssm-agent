@@ -140,8 +140,8 @@ func TestS3Resource_ValidateAndParseSourceInfo_WithAlphabeticExpectedBucketOwner
 	}`
 
 	s3resource, err := NewS3Resource(contextMock, sourceInfo)
-
-	assert.Errorf(t, err)
+	assert.Error(t, err)
+	assert.Nil(t, s3resource)
 }
 
 func TestS3Resource_ValidateAndParseSourceInfo_WithShortExpectedBucketOwner_ThrowsError(t *testing.T) {
@@ -154,7 +154,8 @@ func TestS3Resource_ValidateAndParseSourceInfo_WithShortExpectedBucketOwner_Thro
 
 	s3resource, err := NewS3Resource(contextMock, sourceInfo)
 
-	assert.Errorf(t, err)
+	assert.Nil(t, s3resource)
+	assert.Error(t, err)
 }
 
 func TestS3Resource_ValidateAndParseSourceInfo_WithLongExpectedBucketOwner_ThrowsError(t *testing.T) {
@@ -167,7 +168,8 @@ func TestS3Resource_ValidateAndParseSourceInfo_WithLongExpectedBucketOwner_Throw
 
 	s3resource, err := NewS3Resource(contextMock, sourceInfo)
 
-	assert.Errorf(t, err)
+	assert.Nil(t, s3resource)
+	assert.Error(t, err)
 }
 
 func TestS3Resource_Download(t *testing.T) {
