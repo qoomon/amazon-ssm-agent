@@ -43,11 +43,19 @@ func getPlatformName(log log.T) (value string, err error) {
 	return
 }
 
-func isPlatformWindowsServer2012OrEarlier(log log.T) (bool, error) {
+func isPlatformWindowsServer2012OrEarlier(_ log.T) (bool, error) {
 	return false, nil
 }
 
-func getPlatformType(log log.T) (value string, err error) {
+func isPlatformWindowsServer2025OrLater(_ log.T) (bool, error) {
+	return false, nil
+}
+
+func isWindowsServer2025OrLater(_ string, _ log.T) (bool, error) {
+	return false, nil
+}
+
+func getPlatformType(_ log.T) (string, error) {
 	return "macos", nil
 }
 
@@ -57,8 +65,8 @@ func getPlatformVersion(log log.T) (value string, err error) {
 	return
 }
 
-func getPlatformSku(log log.T) (value string, err error) {
-	return
+func getPlatformSku(_ log.T) (string, error) {
+	return "", nil
 }
 
 var execWithTimeout = func(cmd string, param ...string) ([]byte, error) {

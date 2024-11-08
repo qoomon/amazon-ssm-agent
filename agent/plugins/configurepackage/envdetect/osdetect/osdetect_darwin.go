@@ -1,4 +1,7 @@
-package darwin
+//go:build darwin
+// +build darwin
+
+package osdetect
 
 import (
 	"os/exec"
@@ -9,18 +12,15 @@ import (
 	c "github.com/aws/amazon-ssm-agent/agent/plugins/configurepackage/envdetect/constants"
 )
 
-type Detector struct {
-}
-
-func (*Detector) DetectPkgManager(platform string, version string, family string) (string, error) {
+func DetectPkgManager(platform string, version string, family string) (string, error) {
 	return c.PackageManagerMac, nil
 }
 
-func (*Detector) DetectInitSystem() (string, error) {
+func DetectInitSystem() (string, error) {
 	return c.InitLaunchd, nil
 }
 
-func (*Detector) DetectPlatform(_ log.T) (string, string, string, error) {
+func DetectPlatform(_ log.T) (string, string, string, error) {
 	cmdOut, err := exec.Command("/usr/bin/sw_vers", "-productVersion").Output()
 	if err != nil {
 		return "", "", "", err

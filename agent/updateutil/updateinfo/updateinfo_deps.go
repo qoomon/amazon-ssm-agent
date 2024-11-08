@@ -25,6 +25,7 @@ type T interface {
 	GetInstallScriptName() string
 	GetUninstallScriptName() string
 	GetPlatform() string
+	GetPlatformVersion() string
 }
 
 // updateInfoImpl holds information for the instance

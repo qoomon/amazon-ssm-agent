@@ -92,8 +92,8 @@ const PlatformWindows = "windows"
 const PlatformDarwin = "mac_os_x"
 
 // OperatingSystemSKUs to denote Windows Nano installations
-const SKUProductDatacenterNanoServer = "143"
-const SKUProductStandardNanoServer = "144"
+const SKUProductDatacenterNanoServer uint32 = 143
+const SKUProductStandardNanoServer uint32 = 144
 
 // Init marks a init system used by the Operating Sysstem
 

@@ -46,6 +46,8 @@ Copyright (c) 2017 Benjamin Scher Purcell <benjapurcell@gmail.com>
 Copyright (c) 2016-2017 Daniel Fu
 * cenkalti/backoff - https://github.com/cenkalti/backoff
 Copyright (c) 2014 Cenk Alti
+* yusufpapurcu/wmi - https://github.com/yusufpapurcu/wmi
+Copyright (c) 2013 Stack Exchange
 
 MIT License
 

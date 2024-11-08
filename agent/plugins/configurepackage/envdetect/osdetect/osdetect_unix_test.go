@@ -1,4 +1,7 @@
-package linux
+//go:build freebsd || linux || netbsd || openbsd
+// +build freebsd linux netbsd openbsd
+
+package osdetect
 
 import (
 	"fmt"
@@ -408,8 +411,7 @@ func TestDetectPackageManager(t *testing.T) {
 
 	for _, m := range data {
 		t.Run(fmt.Sprintf("(%s,%s,%s) in %s", m.platform, m.version, m.family, m.expected), func(t *testing.T) {
-			d := Detector{}
-			result, err := d.DetectPkgManager(m.platform, m.version, m.family)
+			result, err := DetectPkgManager(m.platform, m.version, m.family)
 
 			if m.expectError {
 				assert.True(t, err != nil, "error expected")

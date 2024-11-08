@@ -18,7 +18,6 @@ package processor
 import (
 	"bytes"
 	"fmt"
-	"github.com/aws/amazon-ssm-agent/common/utility"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -26,12 +25,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/amazon-ssm-agent/common/utility"
+
 	"github.com/aws/amazon-ssm-agent/agent/appconfig"
 	"github.com/aws/amazon-ssm-agent/agent/context"
 	"github.com/aws/amazon-ssm-agent/agent/contracts"
 	"github.com/aws/amazon-ssm-agent/agent/fileutil"
 	"github.com/aws/amazon-ssm-agent/agent/fileutil/artifact"
 	"github.com/aws/amazon-ssm-agent/agent/log"
+	"github.com/aws/amazon-ssm-agent/agent/platform"
 	testerPkg "github.com/aws/amazon-ssm-agent/agent/update/tester"
 	"github.com/aws/amazon-ssm-agent/agent/updateutil"
 	"github.com/aws/amazon-ssm-agent/agent/updateutil/updateconstants"
@@ -46,15 +48,16 @@ var minimumSupportedVersions map[string]string
 var once sync.Once
 
 var (
-	downloadArtifact       = artifact.Download
-	uncompress             = fileutil.Uncompress
-	getInstalledVersionRef = getInstalledVersions
-	getDirectoryNames      = fileutil.GetDirectoryNames
-	deleteDirectory        = os.RemoveAll
-	getStableManifestURL   = updateutil.GetStableURLFromManifestURL
-	getFileNamesLaterThan  = fileutil.GetFileNamesUnsortedLaterThan
-	moveFile               = fileutil.MoveFile
-	waitForCloudInit       = utility.WaitForCloudInit
+	downloadArtifact           = artifact.Download
+	uncompress                 = fileutil.Uncompress
+	getInstalledVersionRef     = getInstalledVersions
+	getDirectoryNames          = fileutil.GetDirectoryNames
+	deleteDirectory            = os.RemoveAll
+	getStableManifestURL       = updateutil.GetStableURLFromManifestURL
+	getFileNamesLaterThan      = fileutil.GetFileNamesUnsortedLaterThan
+	moveFile                   = fileutil.MoveFile
+	waitForCloudInit           = utility.WaitForCloudInit
+	isWindowsServer2025OrLater = platform.IsWindowsServer2025OrLater
 )
 
 const (
@@ -64,6 +67,7 @@ const (
 	defaultSelfUpdateMessageID = "aws.ssm.self-update-agent.i-instanceid"
 	installationDirectory      = "installationDir"
 	cloudInitWaitSeconds       = 600
+	agentVersionPriorWin2025   = "3.3.1230.0"
 )
 
 // NewUpdater creates an instance of Updater and other services it requires
@@ -161,18 +165,28 @@ func (u *Updater) Failed(updateDetail *UpdateDetail, log log.T, code updateconst
 
 // validateUpdateVersion validates target version number base on the current platform
 // to avoid accidentally downgrade agent to the earlier version that doesn't support current platform
-func validateUpdateVersion(log log.T, detail *UpdateDetail, info updateinfo.T) (err error) {
-	compareResult := 0
+func validateUpdateVersion(log log.T, detail *UpdateDetail, info updateinfo.T) error {
 	minimumVersions := getMinimumVSupportedVersions()
 
 	// check if current platform has minimum supported version
 	if val, ok := (*minimumVersions)[info.GetPlatform()]; ok {
 		// compare current agent version with minimum supported version
-		if compareResult, err = versionutil.VersionCompare(detail.TargetVersion, val); err != nil {
+		if compareResult, err := versionutil.VersionCompare(detail.TargetVersion, val); err != nil {
 			return err
-		}
-		if compareResult < 0 {
+		} else if compareResult < 0 {
 			return fmt.Errorf("agent version %v is unsupported on current platform", detail.TargetVersion)
+		}
+	}
+
+	if windows2025OrLater, err := isWindowsServer2025OrLater(info.GetPlatformVersion(), log); err != nil {
+		return err
+	} else if windows2025OrLater {
+		// target agent version has to be greater than the lastest agent version that didn't have support for Win 2025,
+		// in order to work with it or with any other Win released after
+		if compareResult, err := versionutil.VersionCompare(detail.TargetVersion, agentVersionPriorWin2025); err != nil {
+			return err
+		} else if compareResult <= 0 {
+			return fmt.Errorf("agent version %s is unsupported on current platform", detail.TargetVersion)
 		}
 	}
 

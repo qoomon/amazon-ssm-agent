@@ -29,12 +29,13 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/twinj/uuid v0.0.0-20151029044442-89173bcdda19 // Don't update -- breaks
 	github.com/xtaci/smux v1.5.15
+	github.com/yusufpapurcu/wmi v1.2.4
 	go.nanomsg.org/mangos/v3 v3.3.0
 	golang.org/x/crypto v0.24.0
 	golang.org/x/net v0.26.0
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.21.0
+	golang.org/x/sys v0.26.0
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -49,6 +50,7 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
+	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect

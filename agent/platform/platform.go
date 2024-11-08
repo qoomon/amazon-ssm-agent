@@ -35,6 +35,16 @@ func IsPlatformWindowsServer2012OrEarlier(log log.T) (bool, error) {
 	return isPlatformWindowsServer2012OrEarlier(log)
 }
 
+// IsPlatformWindowsServer2025OrLater returns true if current platform is Windows Server 2025 or later
+func IsPlatformWindowsServer2025OrLater(log log.T) (bool, error) {
+	return isPlatformWindowsServer2025OrLater(log)
+}
+
+// IsWindowsServer2025OrLater returns true if passed platformVersion is the same as of Windows Server 2025 or later
+func IsWindowsServer2025OrLater(platformVersion string, log log.T) (bool, error) {
+	return isWindowsServer2025OrLater(platformVersion, log)
+}
+
 // PlatformName gets the OS specific platform name.
 func PlatformName(log log.T) (name string, err error) {
 	name, err = getPlatformNameFn(log)

@@ -1324,6 +1324,7 @@ func TestValidateUpdateVersion(t *testing.T) {
 
 	info := &updateinfomocks.T{}
 	info.On("GetPlatform").Return(updateconstants.PlatformRedHat)
+	info.On("GetPlatformVersion").Return("10.0.22100")
 
 	err := validateUpdateVersion(logger, updateDetail, info)
 
@@ -1340,6 +1341,37 @@ func TestValidateUpdateVersionFailCentOs(t *testing.T) {
 	err := validateUpdateVersion(logger, updateDetail, info)
 
 	assert.Error(t, err)
+}
+
+func TestValidateUpdateVersionFailWindows2025(t *testing.T) {
+	updateDetail := createUpdateDetail(Initialized)
+	updateDetail.TargetVersion = "1.0.0.0"
+	info := &updateinfomocks.T{}
+	info.On("GetPlatform").Return("")
+	info.On("GetPlatformVersion").Return("10.0.26100")
+	isWindowsServer2025OrLater = func(_ string, _ log.T) (bool, error) {
+		return true, nil
+	}
+
+	err := validateUpdateVersion(logmocks.NewMockLog(), updateDetail, info)
+
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, fmt.Sprintf("agent version %s is unsupported on current platform", updateDetail.TargetVersion))
+}
+
+func TestValidateUpdateVersionWindows2025(t *testing.T) {
+	updateDetail := createUpdateDetail(Initialized)
+	updateDetail.TargetVersion = "3.3.1234.0"
+	info := &updateinfomocks.T{}
+	info.On("GetPlatform").Return("")
+	info.On("GetPlatformVersion").Return("10.0.26100")
+	isWindowsServer2025OrLater = func(_ string, _ log.T) (bool, error) {
+		return true, nil
+	}
+
+	err := validateUpdateVersion(logmocks.NewMockLog(), updateDetail, info)
+
+	assert.NoError(t, err)
 }
 
 func TestProceedUpdate(t *testing.T) {
@@ -2104,6 +2136,7 @@ func createUpdaterStubs(control *stubControl) *Updater {
 	context := contextmocks.NewMockDefault()
 	info := &updateinfomocks.T{}
 	info.On("GetPlatform").Return(updateconstants.PlatformRedHat)
+	info.On("GetPlatformVersion").Return("10.0.22100")
 	info.On("GetUninstallScriptName").Return(updateconstants.UninstallScript)
 	info.On("GetInstallScriptName").Return(updateconstants.InstallScript)
 

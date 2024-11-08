@@ -66,11 +66,19 @@ func getPlatformVersion(log log.T) (value string, err error) {
 	return
 }
 
-func getPlatformSku(log log.T) (value string, err error) {
+func getPlatformSku(_ log.T) (value string, err error) {
 	return
 }
 
-func isPlatformWindowsServer2012OrEarlier(log log.T) (bool, error) {
+func isPlatformWindowsServer2012OrEarlier(_ log.T) (bool, error) {
+	return false, nil
+}
+
+func isPlatformWindowsServer2025OrLater(_ log.T) (bool, error) {
+	return false, nil
+}
+
+func isWindowsServer2025OrLater(_ string, _ log.T) (bool, error) {
 	return false, nil
 }
 

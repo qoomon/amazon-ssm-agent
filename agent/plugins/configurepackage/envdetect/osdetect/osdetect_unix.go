@@ -1,4 +1,7 @@
-package linux
+//go:build freebsd || linux || netbsd || openbsd
+// +build freebsd linux netbsd openbsd
+
+package osdetect
 
 import (
 	"errors"
@@ -14,10 +17,7 @@ import (
 	"github.com/aws/amazon-ssm-agent/agent/plugins/configurepackage/envdetect/utils"
 )
 
-type Detector struct {
-}
-
-func (*Detector) DetectPkgManager(platform string, version string, family string) (string, error) {
+func DetectPkgManager(platform string, version string, family string) (string, error) {
 	switch family {
 	case c.PlatformFamilyDebian:
 		return c.PackageManagerApt, nil
@@ -38,7 +38,7 @@ func (*Detector) DetectPkgManager(platform string, version string, family string
 	}
 }
 
-func (*Detector) DetectInitSystem() (string, error) {
+func DetectInitSystem() (string, error) {
 	var cmdOut []byte
 	var err error
 	var data string
@@ -100,7 +100,7 @@ func (*Detector) DetectInitSystem() (string, error) {
 	return "", errors.New("could not determine init system")
 }
 
-func (*Detector) DetectPlatform(_ log.T) (string, string, string, error) {
+func DetectPlatform(_ log.T) (string, string, string, error) {
 	var platform, version, platformFamily string
 	var err error
 

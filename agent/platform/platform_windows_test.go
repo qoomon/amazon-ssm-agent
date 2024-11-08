@@ -31,9 +31,11 @@ func TestVersion_Positive(t *testing.T) {
 	getPlatformVersionRef = func(log log.T) (value string, err error) {
 		return "6.2323.23", nil
 	}
-
 	isWin2012, err := isPlatformWindowsServer2012OrEarlier(logMock)
 	assert.True(t, isWin2012, "Should return true")
+	assert.Nil(t, err)
+	isWin2025, err := isPlatformWindowsServer2025OrLater(logMock)
+	assert.False(t, isWin2025, "Should return false")
 	assert.Nil(t, err)
 
 	getPlatformVersionRef = func(log log.T) (value string, err error) {
@@ -41,6 +43,9 @@ func TestVersion_Positive(t *testing.T) {
 	}
 	isWin2012, err = isPlatformWindowsServer2012OrEarlier(logMock)
 	assert.False(t, isWin2012, "Should return false")
+	assert.Nil(t, err)
+	isWin2025, err = isPlatformWindowsServer2025OrLater(logMock)
+	assert.True(t, isWin2025, "Should return true")
 	assert.Nil(t, err)
 }
 
@@ -53,12 +58,18 @@ func TestVersion_Negative(t *testing.T) {
 	isWin2012, err := isPlatformWindowsServer2012OrEarlier(logMock)
 	assert.True(t, isWin2012, "Should return true")
 	assert.Nil(t, err)
+	isWin2025, err := isPlatformWindowsServer2025OrLater(logMock)
+	assert.False(t, isWin2025, "Should return false")
+	assert.Nil(t, err)
 
 	getPlatformVersionRef = func(log log.T) (value string, err error) {
 		return "dsdsds23323", nil
 	}
 	isWin2012, err = isPlatformWindowsServer2012OrEarlier(logMock)
 	assert.False(t, isWin2012, "Should return false")
+	assert.NotNil(t, err)
+	isWin2025, err = isPlatformWindowsServer2025OrLater(logMock)
+	assert.False(t, isWin2025, "Should return false")
 	assert.NotNil(t, err)
 
 	getPlatformVersionRef = func(log log.T) (value string, err error) {
@@ -67,12 +78,19 @@ func TestVersion_Negative(t *testing.T) {
 	isWin2012, err = isPlatformWindowsServer2012OrEarlier(logMock)
 	assert.False(t, isWin2012, "Should return false")
 	assert.NotNil(t, err)
+	isWin2025, err = isPlatformWindowsServer2025OrLater(logMock)
+	assert.False(t, isWin2025, "Should return false")
+	assert.NotNil(t, err)
 
 	getPlatformVersionRef = func(log log.T) (value string, err error) {
 		return "", fmt.Errorf("test1")
 	}
 	isWin2012, err = isPlatformWindowsServer2012OrEarlier(logMock)
 	assert.False(t, isWin2012, "Should return false")
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "test1")
+	isWin2025, err = isPlatformWindowsServer2025OrLater(logMock)
+	assert.False(t, isWin2025, "Should return false")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "test1")
 }

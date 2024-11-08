@@ -19,6 +19,10 @@
 package fingerprint
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/base64"
+	"encoding/gob"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -26,10 +30,13 @@ import (
 	"github.com/aws/amazon-ssm-agent/agent/appconfig"
 	"github.com/aws/amazon-ssm-agent/agent/log"
 	"github.com/aws/amazon-ssm-agent/agent/log/ssmlog"
+	"github.com/aws/amazon-ssm-agent/agent/platform"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 )
+
+type WMIInterface string
 
 const (
 	hardwareID     = "uuid"
@@ -37,6 +44,9 @@ const (
 
 	serviceRetryInterval = 15 // Seconds
 	serviceRetry         = 5
+
+	wmic WMIInterface = "WMIC"
+	wql  WMIInterface = "WQL"
 )
 
 func waitForService(log log.T, service *mgr.Service) error {
@@ -91,46 +101,132 @@ var currentHwHash = func() (map[string]string, error) {
 
 	log.Debug("WMI Service is ready to be queried....")
 
-	hardwareHash[hardwareID], _ = csproductUuid(log)
-	hardwareHash["processor-hash"], _ = processorInfoHash()
-	hardwareHash["memory-hash"], _ = memoryInfoHash()
-	hardwareHash["bios-hash"], _ = biosInfoHash()
-	hardwareHash["system-hash"], _ = systemInfoHash()
+	wmiInterface := getWMIInterface(log)
+	hardwareHash[hardwareID], _ = csproductUuid(log, wmiInterface)
+	hardwareHash["processor-hash"], _ = processorInfoHash(log, wmiInterface)
+	hardwareHash["memory-hash"], _ = memoryInfoHash(log, wmiInterface)
+	hardwareHash["bios-hash"], _ = biosInfoHash(log, wmiInterface)
+	hardwareHash["system-hash"], _ = systemInfoHash(log, wmiInterface)
 	hardwareHash["hostname-info"], _ = hostnameInfo()
 	hardwareHash[ipAddressID], _ = primaryIpInfo()
 	hardwareHash["macaddr-info"], _ = macAddrInfo()
-	hardwareHash["disk-info"], _ = diskInfoHash()
+	hardwareHash["disk-info"], _ = diskInfoHash(log, wmiInterface)
 
 	return hardwareHash, nil
 }
 
-func csproductUuid(logger log.T) (encodedValue string, err error) {
-	encodedValue, uuid, err := commandOutputHash(wmicCommand, "csproduct", "get", "UUID")
+// getWMIInterface returns WMI interface which should be used to retrieve hardware info data
+func getWMIInterface(logger log.T) (wmiInterface WMIInterface) {
+	windows2025OrLater, err := platform.IsPlatformWindowsServer2025OrLater(logger)
+	// if we fail to determine Windows version, default to WMIC
+	if err != nil {
+		logger.Warnf("Failed to determine Windows version: %v, returning WMIC as WMI interface", err)
+		return wmic
+	}
+
+	// if it is Windows 2025 or later use WQL, otherwise use WMIC
+	if windows2025OrLater {
+		logger.Debugf("Detected Windows 2025 version or later, returning WQL as WMI interface...")
+		return wql
+	} else {
+		logger.Debugf("Detected version prior to Windows 2025, returning WMIC as WMI interface...")
+		return wmic
+	}
+}
+
+func csproductUuid(logger log.T, wmiInterface WMIInterface) (encodedData string, err error) {
+	var uuid string
+	switch wmiInterface {
+	case wmic:
+		encodedData, uuid, err = commandOutputHash(wmicCommand, "csproduct", "get", "UUID")
+	case wql:
+		var csProductData platform.Win32_ComputerSystemProduct
+		encodedData, csProductData, err = getWMIObject(logger, csProductData)
+		uuid = csProductData.UUID
+	default:
+		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
+	}
+
 	logger.Tracef("Current UUID value: /%v/", uuid)
 	return
 }
 
-func processorInfoHash() (value string, err error) {
-	value, _, err = commandOutputHash(wmicCommand, "cpu", "list", "brief")
+func processorInfoHash(logger log.T, wmiInterface WMIInterface) (encodedData string, err error) {
+	switch wmiInterface {
+	case wmic:
+		encodedData, _, err = commandOutputHash(wmicCommand, "cpu", "list", "brief")
+	case wql:
+		encodedData, _, err = getWMIObject(logger, platform.Win32_Processor{})
+	default:
+		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
+	}
+
 	return
 }
 
-func memoryInfoHash() (value string, err error) {
-	value, _, err = commandOutputHash(wmicCommand, "memorychip", "list", "brief")
+func memoryInfoHash(logger log.T, wmiInterface WMIInterface) (encodedData string, err error) {
+	switch wmiInterface {
+	case wmic:
+		encodedData, _, err = commandOutputHash(wmicCommand, "memorychip", "list", "brief")
+	case wql:
+		encodedData, _, err = getWMIObject(logger, platform.Win32_PhysicalMemory{})
+	default:
+		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
+	}
+
 	return
 }
 
-func biosInfoHash() (value string, err error) {
-	value, _, err = commandOutputHash(wmicCommand, "bios", "list", "brief")
+func biosInfoHash(logger log.T, wmiInterface WMIInterface) (encodedData string, err error) {
+	switch wmiInterface {
+	case wmic:
+		encodedData, _, err = commandOutputHash(wmicCommand, "bios", "list", "brief")
+	case wql:
+		encodedData, _, err = getWMIObject(logger, platform.Win32_BIOS{})
+	default:
+		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
+	}
+
 	return
 }
 
-func systemInfoHash() (value string, err error) {
-	value, _, err = commandOutputHash(wmicCommand, "computersystem", "list", "brief")
+func systemInfoHash(logger log.T, wmiInterface WMIInterface) (encodedData string, err error) {
+	switch wmiInterface {
+	case wmic:
+		encodedData, _, err = commandOutputHash(wmicCommand, "computersystem", "list", "brief")
+	case wql:
+		encodedData, _, err = getWMIObject(logger, platform.Win32_ComputerSystem{})
+	default:
+		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
+	}
+
 	return
 }
 
-func diskInfoHash() (value string, err error) {
-	value, _, err = commandOutputHash(wmicCommand, "diskdrive", "list", "brief")
+func diskInfoHash(logger log.T, wmiInterface WMIInterface) (encodedData string, err error) {
+	switch wmiInterface {
+	case wmic:
+		encodedData, _, err = commandOutputHash(wmicCommand, "diskdrive", "list", "brief")
+	case wql:
+		encodedData, _, err = getWMIObject(logger, platform.Win32_DiskDrive{})
+	default:
+		logger.Warnf("Unknown WMI interface: %v", wmiInterface)
+	}
+
+	return
+}
+
+func getWMIObject[T interface{}](logger log.T, _ T) (encodedWmiObject string, wmiObject T, err error) {
+	if wmiObject, err = platform.GetSingleWMIObject(wmiObject); err != nil {
+		logger.Errorf("Failed to fetch WMI object: %v", err)
+	} else {
+		var b bytes.Buffer
+		if err = gob.NewEncoder(&b).Encode(wmiObject); err != nil {
+			logger.Errorf("Failed to encode WMI object: %v", err)
+		} else {
+			sum := md5.Sum(b.Bytes())
+			encodedWmiObject = base64.StdEncoding.EncodeToString(sum[:])
+		}
+	}
 	return
 }

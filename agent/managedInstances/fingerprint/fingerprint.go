@@ -87,10 +87,16 @@ func SetSimilarityThreshold(log log.T, value int) (err error) {
 }
 
 // generateFingerprint generates new fingerprint and saves it in the vault
-func generateFingerprint(log log.T) (string, error) {
+func generateFingerprint(log log.T) (fingerprint string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Recovered from panic: %v", r)
+			err = fmt.Errorf("Unexpected error while calculating fingerprint: %v", r)
+		}
+	}()
+
 	var hardwareHash map[string]string
 	var savedHwInfo hwInfo
-	var err error
 	var hwHashErr error
 
 	// retry getting the new hash and compare with the saved hash for 3 times
@@ -143,21 +149,20 @@ func generateFingerprint(log log.T) (string, error) {
 	uuid.SwitchFormat(uuid.CleanHyphen)
 	// check if this is the first time we are generating the fingerprint
 	// or if there is no match
-	new_fingerprint := ""
 	if !hasFingerprint(savedHwInfo) {
 		// generate new fingerprint
 		log.Info("No initial fingerprint detected, generating fingerprint file...")
-		new_fingerprint = uuid.NewV4().String()
+		fingerprint = uuid.NewV4().String()
 	} else if !isSimilarHardwareHash(log, savedHwInfo.HardwareHash, hardwareHash, savedHwInfo.SimilarityThreshold) {
 		log.Info("Calculated hardware difference, regenerating fingerprint...")
-		new_fingerprint = uuid.NewV4().String()
+		fingerprint = uuid.NewV4().String()
 	} else {
 		return savedHwInfo.Fingerprint, nil
 	}
 
 	// generate updated info to save to vault
 	updatedHwInfo := hwInfo{
-		Fingerprint:         new_fingerprint,
+		Fingerprint:         fingerprint,
 		HardwareHash:        hardwareHash,
 		SimilarityThreshold: savedHwInfo.SimilarityThreshold,
 	}
@@ -166,7 +171,7 @@ func generateFingerprint(log log.T) (string, error) {
 	if err = save(updatedHwInfo); err != nil {
 		log.Errorf("Error while saving fingerprint data from vault: %s", err)
 	}
-	return new_fingerprint, err
+	return fingerprint, err
 }
 
 func fetch(log log.T) (hwInfo, error) {

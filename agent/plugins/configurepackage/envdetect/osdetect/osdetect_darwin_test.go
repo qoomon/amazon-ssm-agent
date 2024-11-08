@@ -1,4 +1,7 @@
-package darwin
+//go:build darwin
+// +build darwin
+
+package osdetect
 
 import (
 	"fmt"
@@ -26,16 +29,14 @@ func TestPlatformDetect(t *testing.T) {
 }
 
 func TestDetectInitSystem(t *testing.T) {
-	d := Detector{}
-	result, err := d.DetectInitSystem()
+	result, err := DetectInitSystem()
 
 	assert.NoError(t, err)
 	assert.Equal(t, c.InitLaunchd, result)
 }
 
 func TestDetectPkgManager(t *testing.T) {
-	d := Detector{}
-	result, err := d.DetectPkgManager("", "", "") // parameters only matter for linux
+	result, err := DetectPkgManager("", "", "") // parameters only matter for linux
 
 	assert.NoError(t, err)
 	assert.Equal(t, c.PackageManagerMac, result)

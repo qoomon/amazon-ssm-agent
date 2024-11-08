@@ -84,6 +84,11 @@ func (i *updateInfoImpl) GetPlatform() string {
 	return i.platform
 }
 
+// GetPlatformVersion returns the version of the current platform
+func (i *updateInfoImpl) GetPlatformVersion() string {
+	return i.platformVersion
+}
+
 func getMinimumVersionForSystemD() (systemDMap *map[string]string) {
 	once.Do(func() {
 		isUsingSystemD = make(map[string]string)
