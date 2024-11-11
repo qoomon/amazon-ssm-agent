@@ -1,5 +1,17 @@
 Latest
 ===============
+- Add alternative to wmic to support Windows 2025
+- Add armv7 architecture support for greengrass component
+- Add support in ssm-setup-cli for standalone installation in on-premises environments
+- Fail ssm-setup-cli install command if agent config is not loadable
+- Implement S3 ownership verification as an optional parameter for plugins
+- Mark Session task as cancelled when MGS indicates that session is over
+- Update configurePackage to use fixed download method
+- Update Docker Engine version and use system environment variables in installation path
+- Update GreenGrass component minor version to 1.3.1
+
+3.3.1230.0
+===============
 - Revert compatibility hook for future Windows versions as it increased CPU consumption for document execution on Windows.
 - Revert Increase RunCommand timeout during the registration process for the on-prem instances
 
