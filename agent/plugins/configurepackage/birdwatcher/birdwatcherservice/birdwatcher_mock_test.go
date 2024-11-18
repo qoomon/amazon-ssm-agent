@@ -22,15 +22,11 @@ import (
 // networkMock
 type networkMock struct {
 	downloadInput  artifact.DownloadInput
-	downloadOutput *artifact.DownloadOutput
+	downloadOutput artifact.DownloadOutput
 	downloadError  error
 }
 
-func (p *networkMock) DownloadUsingHttp(context context.T, input artifact.DownloadInput) (*artifact.DownloadOutput, error) {
-	p.downloadInput = input
-	return p.downloadOutput, p.downloadError
-}
-func (p *networkMock) DownloadUsingS3(context context.T, input artifact.DownloadInput) (*artifact.DownloadOutput, error) {
+func (p *networkMock) Download(context context.T, input artifact.DownloadInput) (artifact.DownloadOutput, error) {
 	p.downloadInput = input
 	return p.downloadOutput, p.downloadError
 }
