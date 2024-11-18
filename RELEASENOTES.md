@@ -1,5 +1,10 @@
 Latest
 ===============
+- Revert "Update configurePackage to use fixed download method"
+- Revert "Use a single syscall for route table for health check IP"
+
+3.3.1311.0
+===============
 - Add alternative to wmic to support Windows 2025
 - Add armv7 architecture support for greengrass component
 - Add support in ssm-setup-cli for standalone installation in on-premises environments
