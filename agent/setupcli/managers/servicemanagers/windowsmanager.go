@@ -43,14 +43,9 @@ func (m *windowsManager) StartAgent() error {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			ec := exitError.ExitCode()
 			// NET HELPMSG 2182 : The requested service has already been started.
-			if ec == 2182 {
+			if ec == 2 {
 				return nil
 			}
-		}
-		output = strings.ToLower(output)
-		if strings.Contains(output, "service has already been started") {
-			// service already running
-			return nil
 		}
 		return fmt.Errorf("windows: failed to start agent with output '%s' and error: %v", output, err)
 	}
@@ -64,14 +59,9 @@ func (m *windowsManager) StopAgent() error {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			ec := exitError.ExitCode()
 			//NET HELPMSG 3521 : The *** service is not started.
-			if ec == 3521 {
+			if ec == 2 {
 				return nil
 			}
-		}
-		output = strings.ToLower(output)
-		if strings.Contains(output, "service is not started") {
-			// Service is already stopped
-			return nil
 		}
 		return fmt.Errorf("windows: failed to stop agent with output '%s' and error: %v", output, err)
 	}
